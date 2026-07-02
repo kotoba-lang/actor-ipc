@@ -1,4 +1,4 @@
-(ns core.actor
+(ns actor-ipc.actor
   "Actor model: network-authoritative entity state. Restored from the legacy
   kami-engine/kami-core Rust crate's `src/actor.rs` (82 lines), deleted in
   kotoba-lang/kami-engine PR #82 \"Remove Rust workspace from kami-engine\", as
@@ -12,7 +12,7 @@
   `hecs::World`-partitioned `EntityId`. hecs's raw archetype/entity-storage
   internals are NOT ported (no CLJC equivalent) — per ADR-2607010930 and the
   sibling `kotoba-lang/scene-graph` restoration, entities are represented as
-  plain integer IDs (`core/entity-id?`) keyed into ordinary CLJC maps rather than
+  plain integer IDs (`actor-ipc/entity-id?`) keyed into ordinary CLJC maps rather than
   a native ECS. The `components` submodule below (originally `#[repr(C)]`
   `bytemuck::Pod` GPU-layout structs) becomes plain CLJC maps with keyword keys;
   there is no GPU-buffer memory layout to preserve in portable CLJC.")

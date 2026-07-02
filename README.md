@@ -1,9 +1,13 @@
-# kotoba-lang/core
+# kotoba-lang/actor-ipc
 
 Zero-dep portable `.cljc` — restored from the legacy `kami-engine/kami-core` Rust crate
 (`kami-core/src/{lib,actor,ipc,time}.rs`, 572 lines total; deleted in
 `kotoba-lang/kami-engine` PR #82 "Remove Rust workspace from kami-engine") as part of the
 **clj-wgsl migration** (ADR-2607010930, `com-junkawasaki/root`).
+
+**Renamed from `kotoba-lang/core` to `actor-ipc`** (2026-07-02, owner request) — "core" is
+too generic; the restored content is specifically an Actor model plus columnar zero-copy IPC
+plus a fixed-timestep clock, so the name now names the capability directly.
 
 ## Status
 
@@ -11,14 +15,14 @@ Restored. `kami-core` was "Actor + hecs ECS + KAMI Interface (columnar zero-copy
 network-authoritative actor model plus a columnar zero-copy game-data IPC format plus a
 fixed-timestep game clock. All of it ports to pure CLJC data + functions:
 
-- `core.cljc` — `EntityId` / `IslandId` / `Tick` type-alias documentation (root `lib.rs`).
-- `core/actor.cljc` — `Authority`, `ActorType`, `ActorId`, and the standard ECS component
+- `actor_ipc.cljc` — `EntityId` / `IslandId` / `Tick` type-alias documentation (root `lib.rs`).
+- `actor_ipc/actor.cljc` — `Authority`, `ActorType`, `ActorId`, and the standard ECS component
   shapes (`Position`, `Rotation`, `Velocity`, `Scale`, `AnimationState`, `Health`, `MeshId`,
   `MaterialId`) as plain CLJC maps (`actor.rs`).
-- `core/ipc.cljc` — `Dtype`, `Column`, `Frame`, `Delta`, and `compute-delta`, the columnar
+- `actor_ipc/ipc.cljc` — `Dtype`, `Column`, `Frame`, `Delta`, and `compute-delta`, the columnar
   zero-copy KAMI Interface frame/delta format, including `Delta` wire (de)serialization
   (`ipc.rs`).
-- `core/time.cljc` — `GameClock`, a fixed-timestep game loop clock (`time.rs`).
+- `actor_ipc/time.cljc` — `GameClock`, a fixed-timestep game loop clock (`time.rs`).
 
 **hecs-ECS-to-plain-map adaptation:** the original crate partitioned entity state in a
 `hecs::World` (a native archetype-storage ECS). hecs's raw entity-storage internals have no
@@ -35,7 +39,7 @@ portable-serialization pattern used by the sibling `kotoba-lang/rtc` restoration
 
 All 3 original Rust `#[test]`s from `ipc.rs` (`column_size`, `frame_efficiency`,
 `delta_roundtrip` — `actor.rs`/`time.rs` had no `#[test]`s in the original crate) are ported
-1:1 to `test/core_test.cljc`, plus light shape checks for `actor`/`time` and a namespace-load
+1:1 to `test/actor_ipc_test.cljc`, plus light shape checks for `actor`/`time` and a namespace-load
 smoke test: **6 tests / 19 assertions, 0 failures.**
 
 Pure data + pure functions throughout; no IO/GPU. Native execution (wgpu / wasmtime / wasmi)

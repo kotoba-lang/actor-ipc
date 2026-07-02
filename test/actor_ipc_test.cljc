@@ -1,21 +1,21 @@
-(ns core-test
+(ns actor-ipc-test
   "Tests restored from the legacy kami-engine/kami-core Rust crate's `#[test]`
   modules (deleted in kotoba-lang/kami-engine PR #82 \"Remove Rust workspace
   from kami-engine\"), ported 1:1 to clojure.test, as part of the clj-wgsl
   migration (ADR-2607010930, com-junkawasaki/root). `actor.rs` and `time.rs` had
   no `#[test]`s in the original crate; only `ipc.rs` (`mod tests`) did."
   (:require [clojure.test :refer [deftest is testing]]
-            [core]
-            [core.actor :as actor]
-            [core.ipc :as ipc]
-            [core.time :as time]))
+            [actor-ipc]
+            [actor-ipc.actor :as actor]
+            [actor-ipc.ipc :as ipc]
+            [actor-ipc.time :as time]))
 
 (deftest namespace-loads
   (testing "the restored CLJC namespace loads"
-    (is (some? (the-ns 'core)))
-    (is (some? (the-ns 'core.actor)))
-    (is (some? (the-ns 'core.ipc)))
-    (is (some? (the-ns 'core.time)))))
+    (is (some? (the-ns 'actor-ipc)))
+    (is (some? (the-ns 'actor-ipc.actor)))
+    (is (some? (the-ns 'actor-ipc.ipc)))
+    (is (some? (the-ns 'actor-ipc.time)))))
 
 ;; --- ported from kami-core/src/ipc.rs `mod tests` ---------------------
 

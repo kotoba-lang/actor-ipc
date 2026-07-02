@@ -1,4 +1,4 @@
-(ns core
+(ns actor-ipc
   "Zero-dep portable CLJC. Restored from the legacy kami-engine/kami-core Rust crate
   (deleted in kotoba-lang/kami-engine PR #82 \"Remove Rust workspace from kami-engine\")
   as part of the clj-wgsl migration (ADR-2607010930, com-junkawasaki/root). Native
@@ -27,9 +27,9 @@
   maps rather than a native archetype-storage ECS.
 
   Sub-namespaces (mirroring the original `pub mod` declarations in lib.rs):
-    core.actor — actor identity / authority / ECS component shapes (actor.rs)
-    core.ipc   — columnar zero-copy KAMI Interface frame/delta format (ipc.rs)
-    core.time  — fixed-timestep game clock (time.rs)")
+    actor-ipc.actor — actor identity / authority / ECS component shapes (actor.rs)
+    actor-ipc.ipc   — columnar zero-copy KAMI Interface frame/delta format (ipc.rs)
+    actor-ipc.time  — fixed-timestep game clock (time.rs)")
 
 ;; EntityId: a plain non-negative integer, globally unique within an island.
 ;; (Rust: `pub type EntityId = u64;`)

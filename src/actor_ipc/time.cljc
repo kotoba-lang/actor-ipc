@@ -1,4 +1,4 @@
-(ns core.time
+(ns actor-ipc.time
   "Fixed-timestep game loop timing. Restored from the legacy kami-engine/kami-core
   Rust crate's `src/time.rs` (43 lines), deleted in kotoba-lang/kami-engine PR #82
   \"Remove Rust workspace from kami-engine\", as part of the clj-wgsl migration

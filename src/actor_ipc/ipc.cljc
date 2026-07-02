@@ -1,4 +1,4 @@
-(ns core.ipc
+(ns actor-ipc.ipc
   "KAMI Interface: columnar zero-copy game data format. Restored from the legacy
   kami-engine/kami-core Rust crate's `src/ipc.rs` (447 lines), deleted in
   kotoba-lang/kami-engine PR #82 \"Remove Rust workspace from kami-engine\", as
