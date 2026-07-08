@@ -12,10 +12,10 @@
 
 (deftest namespace-loads
   (testing "the restored CLJC namespace loads"
-    (is (some? (the-ns 'actor-ipc)))
-    (is (some? (the-ns 'actor-ipc.actor)))
-    (is (some? (the-ns 'actor-ipc.ipc)))
-    (is (some? (the-ns 'actor-ipc.time)))))
+    (is (some? (find-ns 'actor-ipc)))
+    (is (some? (find-ns 'actor-ipc.actor)))
+    (is (some? (find-ns 'actor-ipc.ipc)))
+    (is (some? (find-ns 'actor-ipc.time)))))
 
 ;; --- ported from kami-core/src/ipc.rs `mod tests` ---------------------
 
