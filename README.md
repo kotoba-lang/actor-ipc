@@ -45,6 +45,17 @@ smoke test: **6 tests / 19 assertions, 0 failures.**
 Pure data + pure functions throughout; no IO/GPU. Native execution (wgpu / wasmtime / wasmi)
 stays substrate.
 
+## Kotoba bounded profile
+
+`src/actor_ipc/bounded_clock.kotoba` is a capability-free Kotoba port of
+`actor_ipc.time`'s fixed-timestep `GameClock` (`make-clock`/
+`advance-clock`/accessors/`clock-alpha`/`wrap32`), represented as a fixed
+4-field record instead of the legacy open map. `actor_ipc.cljc`/
+`actor_ipc/actor.cljc`/`actor_ipc/ipc.cljc` stay CLJC oracle (not
+reviewed this pass). See
+[migration/bounded-clock-v1.edn](migration/bounded-clock-v1.edn) for the
+full record.
+
 ## Develop
 
 ```bash
