@@ -18,3 +18,15 @@ jobs:
           cli: latest
       - run: clojure -M:test
       - run: clojure -M:lint
+      - name: Compile bounded clock profile
+        run: |
+          mkdir -p target/kotoba
+          clojure -M:kotoba compile src/actor_ipc/bounded_clock.kotoba \
+            --source-path src --target js-browser --output target/kotoba/clock.mjs
+          clojure -M:kotoba compile src/actor_ipc/bounded_clock.kotoba \
+            --source-path src --target wasm32-browser --output target/kotoba/clock.wasm
+      - name: Execute Web and typed Wasm conformance
+        run: |
+          compiler_src="$(clojure -Spath -M:kotoba | tr ':' '\n' | grep '/compiler/' | head -1)"
+          node scripts/verify-kotoba.mjs target/kotoba/clock.mjs \
+            target/kotoba/clock.wasm "$(dirname "$compiler_src")/runtime/browser-host.mjs"
