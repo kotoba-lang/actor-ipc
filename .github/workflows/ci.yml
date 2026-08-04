@@ -16,7 +16,13 @@ jobs:
       - uses: DeLaGuardo/setup-clojure@13.4
         with:
           cli: latest
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
       - run: clojure -M:test
+      - run: npm run test:cljs
       - run: clojure -M:lint
       - name: Compile bounded clock profile
         run: |

@@ -4,11 +4,13 @@
   from kami-engine\"), ported 1:1 to clojure.test, as part of the clj-wgsl
   migration (ADR-2607010930, com-junkawasaki/root). `actor.rs` and `time.rs` had
   no `#[test]`s in the original crate; only `ipc.rs` (`mod tests`) did."
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require #?(:clj [clojure.test :refer [deftest is testing]]
+               :cljs [cljs.test :refer [deftest is testing] :include-macros true])
             [actor-ipc]
             [actor-ipc.actor :as actor]
             [actor-ipc.ipc :as ipc]
-            [actor-ipc.time :as time]))
+            [actor-ipc.time :as time]
+            [kotoba.value.codec :as value]))
 
 (deftest namespace-loads
   (testing "the restored CLJC namespace loads"
@@ -62,10 +64,38 @@
     (is (= 2 (count (:changed-indices delta))))
 
     (let [bytes (ipc/delta-to-bytes delta)
-          restored (ipc/delta-from-bytes bytes)]
+          restored (ipc/delta-from-bytes bytes)
+          envelope (value/decode-value bytes)]
+      (is #?(:clj (bytes? bytes)
+             :cljs (instance? js/Uint8Array bytes)))
+      (is (= ipc/delta-wire-format (:format envelope)))
+      (is (value/float64?
+           (get-in envelope [:delta :columns 0 :data 0])))
       (is (= [0 3] (:changed-indices restored)))
       (is (= 1 (:tick restored)))
-      (is (= 1 (ipc/delta-n-columns restored))))))
+      (is (= 1 (ipc/delta-n-columns restored)))
+      (is (= (:columns delta) (:columns restored)))
+      (is (= (mapv #(bit-and % 0xff) (seq bytes))
+             (mapv #(bit-and % 0xff) (seq (ipc/delta-to-bytes delta))))))))
+
+(deftest delta-wire-is-bounded-versioned-and-fail-closed
+  (let [delta (-> (ipc/make-delta 3 4)
+                  (assoc :changed-indices [2])
+                  (ipc/delta-push-column-owned [7] :u32 1))
+        bytes (ipc/delta-to-bytes delta)
+        size #?(:clj (alength ^bytes bytes) :cljs (.-length bytes))]
+    (is (= delta (ipc/delta-from-bytes bytes size)))
+    (is (nil? (ipc/delta-from-bytes bytes (dec size))))
+    (is (thrown? #?(:clj clojure.lang.ExceptionInfo :cljs ExceptionInfo)
+                 (ipc/delta-to-bytes delta (dec size))))
+    (is (nil? (ipc/delta-from-bytes "{:base-tick 3}")))
+    (is (thrown? #?(:clj clojure.lang.ExceptionInfo :cljs ExceptionInfo)
+                 (ipc/delta-to-bytes (assoc delta :changed-indices [2 2]))))
+    (is (thrown? #?(:clj clojure.lang.ExceptionInfo :cljs ExceptionInfo)
+                 (ipc/delta-to-bytes
+                  (assoc-in delta [:columns 0 :data 0] 4294967296))))
+    (is (thrown? #?(:clj clojure.lang.ExceptionInfo :cljs ExceptionInfo)
+                 (ipc/delta-to-bytes (assoc delta :unknown true))))))
 
 ;; --- actor.rs had no #[test]s in the original crate; light shape checks -----
 

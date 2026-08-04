@@ -1,4 +1,7 @@
 {:paths ["src" "test"]
+ :deps {io.github.kotoba-lang/io-ipld
+        {:git/url "https://github.com/kotoba-lang/io-ipld.git"
+         :git/sha "a3c62aed7fb281648372807e93a36e342f2cceb3"}}
  :aliases {:test {:extra-paths ["test"]
                   :extra-deps {io.github.cognitect-labs/test-runner
                                {:git/tag "v0.5.1" :git/sha "dfb30dd"}}
