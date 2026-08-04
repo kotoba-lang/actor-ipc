@@ -30,17 +30,21 @@ portable CLJC equivalent and are NOT ported; entities are represented as plain i
 keyed into ordinary CLJC maps instead, matching the pattern used in the sibling
 `kotoba-lang/scene-graph` restoration (also originally hecs-based).
 
-**Zero-copy-to-EDN adaptation:** the original `Column` held a raw pointer into shared memory
+**Zero-copy-to-canonical-value adaptation:** the original `Column` held a raw pointer into shared memory
 with `unsafe` typed-slice views, and `Delta::to_bytes`/`from_bytes` hand-rolled little-endian
 byte packing. CLJC has no raw pointers, so `Column` data is an ordinary typed vector, and the
-`Delta` wire format is an EDN round-trip via `pr-str`/`clojure.edn/read-string` — the same
-portable-serialization pattern used by the sibling `kotoba-lang/rtc` restoration's
-`rtc.signal` namespace — rather than depending on any external binary/columnar library.
+`Delta` wire is a versioned, bounded `kotoba.value.v1` byte envelope from the org-owned
+`kotoba.value.codec`. Float tagging is private to the adapter: actor-facing data remains
+ordinary numeric vectors, while the CLJ/CLJS wire identity stays canonical. Legacy EDN
+strings are rejected rather than accepted as ambiguously named “bytes.” The runtime
+dependency is the kotoba-lang org codec only; Node tooling is test-only and no external
+hash package is required by actor IPC.
 
 All 3 original Rust `#[test]`s from `ipc.rs` (`column_size`, `frame_efficiency`,
 `delta_roundtrip` — `actor.rs`/`time.rs` had no `#[test]`s in the original crate) are ported
 1:1 to `test/actor_ipc_test.cljc`, plus light shape checks for `actor`/`time` and a namespace-load
-smoke test: **6 tests / 19 assertions, 0 failures.**
+smoke test plus canonical wire boundary cases: **7 tests / 31 assertions on both JVM and
+real ClojureScript/Node, 0 failures.**
 
 Pure data + pure functions throughout; no IO/GPU. Native execution (wgpu / wasmtime / wasmi)
 stays substrate.
@@ -60,4 +64,5 @@ full record.
 
 ```bash
 clojure -M:test
+npm ci && npm run test:cljs
 ```

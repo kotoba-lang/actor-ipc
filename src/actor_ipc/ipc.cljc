@@ -12,21 +12,19 @@
     <-> Network (KamiDelta). All transitions are zero-copy or single memcpy
     (CPU->GPU DMA).
 
-  Zero-copy-to-EDN adaptation: the original `Column` held a raw `*const u8`
+  Zero-copy-to-value adaptation: the original `Column` held a raw `*const u8`
   pointer into shared memory and exposed `unsafe` typed-slice views
   (`as_bytes` / `as_f32_slice` / `as_u32_slice`) for true zero-copy access. CLJC
   has no raw pointers, so a `Column` here is a plain map holding its data as an
   ordinary CLJC vector of numbers (`:data`), not a byte buffer — there is no
   unsafe view step because the data is already typed. The wire (de)serialization
   in `Delta/to_bytes` / `Delta/from_bytes` (originally hand-rolled little-endian
-  byte packing) is ported as an EDN round-trip via `pr-str` / `clojure.edn/
-  read-string`, the same portable-serialization pattern used by the sibling
-  `kotoba-lang/rtc` restoration's `rtc.signal` namespace, rather than depending
-  on any external binary/columnar library. `dtype-item-size` / metadata-byte
-  constants below are kept and documented for wire-size-accounting parity with
-  the original format even though the actual wire bytes are now EDN text."
-  (:require #?(:clj [clojure.edn :as edn]
-               :cljs [cljs.reader :as edn])))
+  byte packing) uses the org-owned canonical `kotoba.value.v1` byte boundary.
+  Float column elements are explicitly tagged at the private wire adapter so
+  ordinary actor APIs keep ordinary numbers without cross-runtime ambiguity.
+  `dtype-item-size` / metadata-byte constants below remain documented for
+  original wire-size accounting."
+  (:require [kotoba.value.codec :as value]))
 
 ;; --- Dtype -----------------------------------------------------------------
 ;; Rust: `#[repr(u8)] pub enum Dtype { F32=0, F16=1, U32=2, U16=3, U8=4, I16=5,
@@ -169,6 +167,12 @@
   "Delta header size in the original wire format (16 bytes: base_tick 4 + tick 4
   + n_changed 4 + n_columns 1 + pad 3)." 16)
 
+(def delta-wire-format :actor-ipc.delta/v1)
+
+(def max-delta-envelope-bytes
+  "Actor IPC ability limit for one canonical delta envelope (16 MiB)."
+  (* 16 1024 1024))
+
 (defn make-delta
   "Construct an empty Delta. Mirrors Rust `Delta::new(base_tick, tick) -> Self`."
   [base-tick tick]
@@ -191,33 +195,107 @@
   [delta index]
   (nth (:columns delta) index))
 
+(def ^:private max-u32 4294967295)
+
+(defn- u32? [x]
+  (and (integer? x) (<= 0 x max-u32)))
+
+(defn- strictly-increasing? [xs]
+  (or (empty? xs)
+      (every? true? (map < xs (next xs)))))
+
+(defn- floating-dtype? [dtype]
+  (contains? #{:f32 :f16 :mat4 :quat} dtype))
+
+(defn- valid-element? [dtype x]
+  (cond
+    (floating-dtype? dtype) (number? x)
+    (= :u32 dtype) (u32? x)
+    (= :u16 dtype) (and (integer? x) (<= 0 x 65535))
+    (= :u8 dtype) (and (integer? x) (<= 0 x 255))
+    (= :i16 dtype) (and (integer? x) (<= -32768 x 32767))
+    :else false))
+
+(defn- valid-column-shape? [{:keys [data len dtype stride] :as column}]
+  (and (map? column)
+       (= #{:data :len :dtype :stride} (set (keys column)))
+       (vector? data)
+       (contains? dtype-values dtype)
+       (integer? stride) (<= 1 stride 255)
+       (u32? len)
+       (= (count data) (* len stride))
+       (every? #(valid-element? dtype %) data)))
+
+(defn- valid-delta-shape? [{:keys [base-tick tick changed-indices columns] :as delta}]
+  (and (map? delta)
+       (= #{:base-tick :tick :changed-indices :columns} (set (keys delta)))
+       (u32? base-tick)
+       (u32? tick)
+       (vector? changed-indices)
+       (every? u32? changed-indices)
+       (strictly-increasing? changed-indices)
+       (vector? columns)
+       (or (seq columns) (empty? changed-indices))
+       (every? valid-column-shape? columns)
+       (every? #(= (count changed-indices) (:len %)) columns)))
+
+(defn- wire-column [{:keys [data dtype] :as column}]
+  (if (floating-dtype? dtype)
+    (assoc column :data (mapv #(value/float64 (double %)) data))
+    column))
+
+(defn- host-column [{:keys [data dtype] :as column}]
+  (if (floating-dtype? dtype)
+    (when (every? value/float64? data)
+      (assoc column :data (mapv value/float64-value data)))
+    column))
+
+(defn- delta->wire-value [delta]
+  (when-not (valid-delta-shape? delta)
+    (throw (ex-info "actor IPC delta is malformed"
+                    {:phase :actor-ipc/delta-encode})))
+  {:format delta-wire-format
+   :delta (update delta :columns #(mapv wire-column %))})
+
+(defn- wire-value->delta [envelope]
+  (when (and (map? envelope)
+             (= #{:format :delta} (set (keys envelope)))
+             (= delta-wire-format (:format envelope))
+             (map? (:delta envelope))
+             (vector? (get-in envelope [:delta :columns])))
+    (let [wire-delta (:delta envelope)
+          columns (mapv host-column (:columns wire-delta))]
+      (when (every? some? columns)
+        (let [delta (assoc wire-delta :columns columns)]
+          (when (valid-delta-shape? delta)
+            delta))))))
+
 (defn delta-to-bytes
-  "Serialize to wire bytes for KNP transmission. Mirrors Rust
-  `Delta::to_bytes(&self) -> Vec<u8>`, adapted to an EDN string round-trip (see
-  namespace docstring) instead of hand-rolled little-endian byte packing."
-  [delta]
-  (pr-str delta))
+  "Serialize a Delta as canonical `kotoba.value.v1` bytes for KNP.
+
+  The optional MAX-BYTES is an ability-owned limit; the default is the actor
+  IPC v1 envelope limit. Malformed or oversized deltas fail closed."
+  ([delta] (delta-to-bytes delta max-delta-envelope-bytes))
+  ([delta max-bytes]
+   (value/encode-bounded (delta->wire-value delta) max-bytes)))
 
 (defn delta-from-bytes
-  "Deserialize from wire bytes. Mirrors Rust `Delta::from_bytes(bytes) ->
-  Option<Self>`; returns nil on parse failure or malformed shape, matching the
-  `Option` return."
-  [bytes]
-  (try
-    (let [delta (edn/read-string bytes)]
-      (when (and (map? delta)
-                 (contains? delta :base-tick)
-                 (contains? delta :tick)
-                 (contains? delta :changed-indices)
-                 (contains? delta :columns))
-        delta))
-    (catch #?(:clj Exception :cljs :default) _
-      nil)))
+  "Deserialize canonical KNP bytes, returning nil for an invalid envelope.
+
+  Size is checked before decoding. Legacy EDN strings are intentionally not
+  accepted because they were never bytes and were not canonical."
+  ([bytes] (delta-from-bytes bytes max-delta-envelope-bytes))
+  ([bytes max-bytes]
+   (try
+     (wire-value->delta (value/decode-bounded bytes max-bytes))
+     (catch #?(:clj Exception :cljs :default) _
+       nil))))
 
 (defn delta-wire-size
   "Wire size in bytes of the original binary format (conceptual — kept for
   size-accounting parity with the Rust format; the actual `delta-to-bytes`
-  payload is EDN text). Mirrors Rust `Delta::wire_size(&self) -> usize`."
+  payload is canonical `kotoba.value.v1`). Mirrors Rust
+  `Delta::wire_size(&self) -> usize`."
   [delta]
   (+ delta-header-bytes
      (* (delta-n-columns delta) 2)

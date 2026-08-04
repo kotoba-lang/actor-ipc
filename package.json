@@ -1,0 +1,10 @@
+{
+  "name": "@kotoba-lang/actor-ipc",
+  "private": true,
+  "scripts": {
+    "test:cljs": "nbb --classpath \"$(clojure -Spath)\" test/actor_ipc_test_runner.cljs"
+  },
+  "devDependencies": {
+    "nbb": "^1.4.208"
+  }
+}
