@@ -63,6 +63,6 @@ full record.
 ## Develop
 
 ```bash
-clojure -M:test
+kbb -M:test
 npm ci && npm run test:cljs
 ```
