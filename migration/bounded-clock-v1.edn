@@ -1,6 +1,6 @@
 {:schema "kotoba-actor-ipc-migration/v1"
  :profile :actor-ipc/bounded-clock-v1
- :legacy {:source "src/actor_ipc/time.cljc"
+ :legacy {:source "src/actor_ipc/time.cljk"
           :status :retained-general-oracle}
  :canonical {:engine-and-conformance "src/actor_ipc/bounded_clock.kotoba"}
  :domain

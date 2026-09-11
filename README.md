@@ -42,7 +42,7 @@ hash package is required by actor IPC.
 
 All 3 original Rust `#[test]`s from `ipc.rs` (`column_size`, `frame_efficiency`,
 `delta_roundtrip` — `actor.rs`/`time.rs` had no `#[test]`s in the original crate) are ported
-1:1 to `test/actor_ipc_test.cljc`, plus light shape checks for `actor`/`time` and a namespace-load
+1:1 to `test/actor_ipc_test.cljk`, plus light shape checks for `actor`/`time` and a namespace-load
 smoke test plus canonical wire boundary cases: **7 tests / 31 assertions on both JVM and
 real ClojureScript/Node, 0 failures.**
 
