@@ -4,7 +4,7 @@
   from kami-engine\"), ported 1:1 to clojure.test, as part of the clj-wgsl
   migration (ADR-2607010930, com-junkawasaki/root). `actor.rs` and `time.rs` had
   no `#[test]`s in the original crate; only `ipc.rs` (`mod tests`) did."
-  (:require #?(:clj [clojure.test :refer [deftest is testing]]
+  (:require #?(:clj [kotoba.test :refer [deftest is testing]]
                :cljs [cljs.test :refer [deftest is testing] :include-macros true])
             [actor-ipc]
             [actor-ipc.actor :as actor]
