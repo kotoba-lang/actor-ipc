@@ -1,5 +1,9 @@
 {:paths ["src" "test"]
- :deps {io.github.kotoba-lang/io-ipld
+ :deps {
+        ;; kotoba.test (clojure.test-compatible surface), not clojure.test --
+        ;; scripts/migrate-clojure-test-to-kotoba-test.cljk. Explicit floor.
+        io.github.kotoba-lang/test {:git/url "https://github.com/kotoba-lang/test.git"
+                                    :git/sha "2ab4885f99fd25552d380d0f6b0b54c5a72eb7ae"}io.github.kotoba-lang/io-ipld
         {:git/url "https://github.com/kotoba-lang/io-ipld.git"
          :git/sha "a3c62aed7fb281648372807e93a36e342f2cceb3"}}
  :aliases {:test {:extra-paths ["test"]
